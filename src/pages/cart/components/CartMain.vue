@@ -2,15 +2,37 @@
 //@ts-ignore
 import Guess from '@/components/Guess/Guess'
 import type { InputNumberBoxEvent } from '@/components/vk-data-input-number-box/vk-data-input-number-box'
-import type { GuessInstance } from '@/types/component'
+import vkDataInputNumberBox from '@/components/vk-data-input-number-box/vk-data-input-number-box.vue'
+const { safeAreaInsets } = uni.getSystemInfoSync()
+
+//是否适配底部安全区
+defineProps<{
+  safeAreaInsetBottom?: boolean
+}>()
+
+const showCartList = ref<boolean>(true)
+
+//修改商品数量
+const onChangeCount = (ev: InputNumberBoxEvent) => {
+  putMemberCartBySkuIdAPI(ev.index, { count: ev.value })
+}
 
 const memberStore = useMemberStore()
+
 //获取购物车数据
 const cartList = ref<CartItem[]>([])
 const getMemberCartData = async () => {
   const res = await getMemberCartAPI()
   cartList.value = res.result
+  showCartList.value = res.result.length > 0
 }
+
+onShow(() => {
+  //用户已登录才允许登录
+  if (memberStore.profile) {
+    getMemberCartData()
+  }
+})
 
 //点击删除按钮
 const onDeleteCart = (skuId: string) => {
@@ -28,49 +50,46 @@ const onDeleteCart = (skuId: string) => {
   })
 }
 
-// 修改商品信息
-const onChangeCount = (ev: InputNumberBoxEvent) => {
-  putMemberCartBySkuIdAPI(ev.index, { count: ev.value })
-}
-
-// 修改选中状态-单品修改
-const onChangeSelected = (item: CartItem) => {
-  // 前端数据更新-取反
+//修改选中状态-单品修改
+const onChangeSelected = async (item: CartItem) => {
+  //前端数据更新-是否选中取反
   item.selected = !item.selected
-  // 后端数据更新
-  putMemberCartBySkuIdAPI(item.id, { selected: item.selected, count: item.count })
+
+  //后端数据更新
+  await putMemberCartBySkuIdAPI(item.id, { selected: item.selected, count: item.count })
 }
 
-// 计算全选状态
+//计算全选状态
 const isSelectedAll = computed(() => {
   return cartList.value.length && cartList.value.every((v) => v.selected)
 })
 
-// 修改选中状态-全部商品
+//修改选中状态-全选修改
 const onChangeSelectedAll = () => {
-  // 全选状态取反
+  //全选状态取反
   const _isSelectedAll = !isSelectedAll.value
-  // 前端数据更新
+  //前端数据更新
   cartList.value.forEach((item) => {
     item.selected = _isSelectedAll
   })
-  // 后端数据更新
+
+  //后端数据更新
   putMemberCartSelectedAPI({ selected: _isSelectedAll })
 }
 
 // 计算选中单品列表
-const selectCartList = computed(() => {
+const selectedCartList = computed(() => {
   return cartList.value.filter((v) => v.selected)
 })
 
-// 计算选中总件数
+// 计算选中的总件数
 const selectedCartListCount = computed(() => {
-  return selectCartList.value.reduce((sum, item) => sum + item.count, 0)
+  return selectedCartList.value.reduce((sum, item) => sum + item.count, 0)
 })
 
 // 计算总金额
 const selectedCartListMoney = computed(() => {
-  return selectCartList.value.reduce((sum, item) => sum + item.price * item.count, 0).toFixed(2)
+  return selectedCartList.value.reduce((sum, item) => sum + item.count * item.nowPrice, 0).toFixed(2)
 })
 
 // 结算按钮
@@ -84,25 +103,14 @@ const gotoPayment = () => {
   // 跳转到结算页
   uni.navigateTo({ url: '/pagesOrder/create/create' })
 }
-
-onShow(() => {
-  //用户允许登录才允许调用
-  if (memberStore.profile) getMemberCartData()
-})
-
-const guessRef = ref<GuessInstance>()
-// 滚动触底事件
-const onScrolltolower = () => {
-  guessRef.value?.getMore()
-}
 </script>
 
 <template>
-  <scroll-view scroll-y class="scroll-view" @scrolltolower="onScrolltolower">
+  <scroll-view scroll-y class="scroll-view">
     <!-- 已登录: 显示购物车 -->
     <template v-if="memberStore.profile">
       <!-- 购物车列表 -->
-      <view class="cart-list" v-if="cartList.length > 0">
+      <view class="cart-list" v-if="true">
         <!-- 优惠提示 -->
         <view class="tips">
           <text class="label">满减</text>
@@ -111,13 +119,13 @@ const onScrolltolower = () => {
         <!-- 滑动操作分区 -->
         <uni-swipe-action>
           <!-- 滑动操作项 -->
-          <uni-swipe-action-item v-for="item in cartList" :key="item.id" class="cart-swipe">
+          <uni-swipe-action-item v-for="item in cartList" :key="item" class="cart-swipe">
             <!-- 商品信息 -->
             <view class="goods">
               <!-- 选中状态 -->
-              <text class="checkbox" :class="{ checked: item.selected }" @tap="onChangeSelected(item)"></text>
-              <navigator :url="`/pages/goods/goods?id=${item.goodsId}`" hover-class="none" class="navigator">
-                <image mode="aspectFill" class="picture" :src="item.picture" />
+              <text @tap="onChangeSelected(item)" class="checkbox" :class="{ checked: item.selected }"></text>
+              <navigator :url="`/pages/goods/goods?id=${item.id}`" hover-class="none" class="navigator">
+                <image mode="aspectFill" class="picture" :src="item.picture"></image>
                 <view class="meta">
                   <view class="name ellipsis">{{ item.name }}</view>
                   <view class="attrsText ellipsis">{{ item.attrsText }}</view>
@@ -125,6 +133,11 @@ const onScrolltolower = () => {
                 </view>
               </navigator>
               <!-- 商品数量 -->
+              <!-- <view class="count">
+                <text class="text">-</text>
+                <input class="input" type="number" v-model />
+                <text class="text">+</text>
+              </view> -->
               <view class="count">
                 <vk-data-input-number-box
                   v-model="item.count"
@@ -132,7 +145,7 @@ const onScrolltolower = () => {
                   :max="item.stock"
                   :index="item.id"
                   @change="onChangeCount"
-                />
+                ></vk-data-input-number-box>
               </view>
             </view>
             <!-- 右侧删除按钮 -->
@@ -149,19 +162,23 @@ const onScrolltolower = () => {
         <image src="/static/images/blank_cart.png" class="image" />
         <text class="text">购物车还是空的，快来挑选好货吧</text>
         <navigator open-type="switchTab" url="/pages/index/index" hover-class="none">
-          <button class="button">去首页看看</button>
+          <button class="button">去首页看看</button>d
         </navigator>
       </view>
       <!-- 吸底工具栏 -->
-      <view class="toolbar">
-        <text class="all" :class="{ checked: isSelectedAll }" @tap="onChangeSelectedAll()">全选</text>
+      <view
+        class="toolbar"
+        v-if="showCartList"
+        :Style="{ paddingBottom: safeAreaInsetBottom ? safeAreaInsets?.bottom + 'px' : 0 }"
+      >
+        <text @tap="onChangeSelectedAll" class="all" :class="{ checked: isSelectedAll }">全选</text>
         <text class="text">合计:</text>
         <text class="amount">{{ selectedCartListMoney }}</text>
         <view class="button-grounp">
           <view
             class="button payment-button"
             :class="{ disabled: selectedCartListCount < 1 }"
-            @tap="gotoPayment()"
+            @click="gotoPayment"
           >
             去结算({{ selectedCartListCount }})
           </view>
@@ -176,7 +193,7 @@ const onScrolltolower = () => {
       </navigator>
     </view>
     <!-- 猜你喜欢 -->
-    <Guess ref="guessRef" />
+    <wGuess ref="guessRef"></wGuess>
     <!-- 底部占位空盒子 -->
     <view class="toolbar-height"></view>
   </scroll-view>
