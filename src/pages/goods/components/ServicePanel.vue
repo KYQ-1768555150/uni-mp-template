@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-//子调父方法
 const emit = defineEmits<{
   (event: 'close'): void
 }>()

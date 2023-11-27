@@ -5,7 +5,7 @@ import wSwiper from '@/components/wSwiper/wSwiper.vue'
 declare module 'vue' {
   export interface GlobalComponents {
     wSwiper: typeof wSwiper
-    wGuess: typeof Guess
+    Guess: typeof Guess
   }
 }
 

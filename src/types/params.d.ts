@@ -290,8 +290,9 @@ type AddressParams = {
 
 /** 购物车类型 */
 type CartItem = {
-  /** 商品 ID */
+  /** 购物车 ID */
   id: string
+  /**商品ID */
   goodsId: string
   /** SKU ID */
   // skuId?: string

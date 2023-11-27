@@ -77,7 +77,7 @@ const getMemberOrderLogisticsByIdData = async () => {
 }
 
 // 删除订单
-const onOrderDelete = (id: string) => {
+const onOrderDelete = () => {
   // 二次确认
   uni.showModal({
     content: '是否删除订单',
@@ -111,7 +111,7 @@ const onTimeup = () => {
   order.value!.orderState = OrderState.YiQuXiao
 }
 //订单支付
-const onOrderPay = async (id: string) => {
+const onOrderPay = async () => {
   //通过环境变量区分开发环境
   if (import.meta.env.DEV) {
     //开发环境：模拟支付，修改订单状态已支付
@@ -137,7 +137,7 @@ const onOrderSend = async () => {
 }
 
 // 确认收货
-const onOrderConfirm = (id: string) => {
+const onOrderConfirm = () => {
   // ⼆次确认弹窗
   uni.showModal({
     content: '为保障您的权益，请收到货并确认⽆误后，再确认收货',
@@ -243,23 +243,22 @@ const onOrderConfirm = (id: string) => {
           <view class="button primary">申请售后</view>
           <navigator url="" class="button"> 去评价 </navigator>
         </view>
+        <!-- 合计 -->
+        <view class="total">
+          <view class="row">
+            <view class="text">商品总价: </view>
+            <view class="symbol">{{ order!.totalMoney }}</view>
+          </view>
+          <view class="row">
+            <view class="text">运费: </view>
+            <view class="symbol">{{ order!.postFree }}</view>
+          </view>
+          <view class="row">
+            <view class="text">应付金额: </view>
+            <view class="symbol primary">{{ order!.payMoney }}</view>
+          </view>
+        </view>
       </view>
-      <!-- 合计 -->
-      <view class="total">
-        <view class="row">
-          <view class="text">商品总价: </view>
-          <view class="symbol">{{ order!.totalMoney }}</view>
-        </view>
-        <view class="row">
-          <view class="text">运费: </view>
-          <view class="symbol">{{ order!.postFree }}</view>
-        </view>
-        <view class="row">
-          <view class="text">应付金额: </view>
-          <view class="symbol primary">{{ order!.payMoney }}</view>
-        </view>
-      </view>
-
       <!-- 订单信息 -->
       <view class="detail">
         <view class="title">订单信息</view>
